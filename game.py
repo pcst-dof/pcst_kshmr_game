@@ -6,15 +6,23 @@ class Game:
     def __init__(self):
         pygame.init()
         
-        self.window_width = 800
-        self.window_height = 600
+        # логическое разрешение игры
+        self.LOGICAL_W, self.LOGICAL_H = 800, 600
+
+        # начальный размер окна
+        self.window_width = self.LOGICAL_W
+        self.window_height = self.LOGICAL_H
         self.fullscreen = False
         
+        # флаг для масштабирования при изменении размера окна
         self.screen = pygame.display.set_mode(
             (self.window_width, self.window_height), 
             pygame.RESIZABLE
         )
         
+        # виртуальный экран для отрисовки с логическим разрешением
+        self.virtual_screen = pygame.Surface((self.LOGICAL_W, self.LOGICAL_H))
+
         pygame.display.set_caption("hello, clown")
         
         # тут будет иконка
@@ -33,6 +41,7 @@ class Game:
         self.running = True
     
     def toggle_fullscreen(self):
+        """переключение между полноэкранным и оконным режимом"""
         self.fullscreen = not self.fullscreen
         
         if self.fullscreen:
@@ -46,11 +55,36 @@ class Game:
                 (self.window_width, self.window_height),
                 pygame.RESIZABLE
             )
+        
+        # обновляем размеры окна для масштабирования
+        self.window_width, self.window_height = self.screen.get_size()
 
 
     def change_scene(self, scene_name):
         if scene_name in self.scenes:
             self.current_scene = self.scenes[scene_name]
+    
+    def _render_scaled(self):
+        """отрисовка виртуального экрана с масштабированием на основной экран"""
+        win_w, win_h = self.screen.get_size()
+        
+        # вычисляем коэфф масштабирования, сохраняя пропорции
+        scale = min(win_w / self.LOGICAL_W, win_h / self.LOGICAL_H)
+        
+        # новые размеры отрисовки виртуального экрана
+        new_w = int(self.LOGICAL_W * scale)
+        new_h = int(self.LOGICAL_H * scale)
+        
+        # масштабируем виртуальный экран до новых размеров
+        scaled = pygame.transform.scale(self.virtual_screen, (new_w, new_h))
+        
+        # отступы для центрирования отрисовки
+        offset_x = (win_w - new_w) // 2
+        offset_y = (win_h - new_h) // 2
+        
+        self.screen.fill((0, 0, 0))  # черный фон за пределами отрисовки
+        self.screen.blit(scaled, (offset_x, offset_y))
+        pygame.display.flip()
 
     def run(self):
         while self.running:
@@ -74,8 +108,9 @@ class Game:
 
                 self.current_scene.handle_event(event)
 
-            self.current_scene.draw(self.screen)
-            pygame.display.flip()
+             # отрисовка на виртуальный экран
+            self.current_scene.draw(self.virtual_screen)
+            self._render_scaled()
             self.clock.tick(60)
 
         pygame.quit()
