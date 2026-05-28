@@ -1,6 +1,7 @@
 import pygame
 import sys
-from scenes import StartScene, Scene1, MainMenu, SettingsMenu, LoadMenu, HelpMenu, AboutMenu
+from pathlib import Path
+from scenes import StartScene, Scene1
 
 class Game:
     def __init__(self):
@@ -27,22 +28,19 @@ class Game:
         
         # тут будет иконка
         try:
-            icon = pygame.image.load('pcst_kshmr_game/assets/images/test_icon.jpg')
+            icon_path = Path(__file__).resolve().parent / "assets" / "images" / "test_icon.jpg"
+            icon = pygame.image.load(str(icon_path))
             pygame.display.set_icon(icon)
         except Exception as e:
             print(f"иконки пока нет: {e}")
         
         self.clock = pygame.time.Clock()
+        self.fade_alpha = 255
         self.scenes = {
             "start": StartScene(self),
-            "scene1": Scene1(self),
-            "main_menu": MainMenu(self),
-            "settings_menu": SettingsMenu(self),
-            "load_menu": LoadMenu(self),
-            "help_menu": HelpMenu(self),
-            "about_menu": AboutMenu(self),
+            "scene1": Scene1(self)
         }
-        self.current_scene = self.scenes["main_menu"]
+        self.current_scene = self.scenes["start"]
         self.running = True
     
     def toggle_fullscreen(self):
@@ -113,8 +111,14 @@ class Game:
 
                 self.current_scene.handle_event(event)
 
-             # отрисовка на виртуальный экран
+            # отрисовка на виртуальный экран
             self.current_scene.draw(self.virtual_screen)
+            if self.fade_alpha > 0:
+                fade_surface = pygame.Surface((self.LOGICAL_W, self.LOGICAL_H))
+                fade_surface.set_alpha(self.fade_alpha)
+                fade_surface.fill((0, 0, 0))
+                self.virtual_screen.blit(fade_surface, (0, 0))
+                self.fade_alpha = max(0, self.fade_alpha - int(self.clock.get_time() * 0.4))
             self._render_scaled()
             self.clock.tick(60)
 

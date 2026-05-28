@@ -1,5 +1,10 @@
 from scenes.scene import Scene
 from ui.button import Button
+from scenes.menu.main_menu import MainMenu
+from scenes.menu.settings_menu import SettingsMenu
+from scenes.menu.load_menu import LoadMenu
+from scenes.menu.help_menu import HelpMenu
+from scenes.menu.about_menu import AboutMenu
 
 class StartScene(Scene):
     def __init__(self, game):
