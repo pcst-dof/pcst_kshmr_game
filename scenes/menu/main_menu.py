@@ -1,35 +1,51 @@
+import os
+import pygame
+
 from scenes.scene import Scene
 from ui.button import Button
-from ui.actions.start_action import start_game
-from ui.actions.load_action import load_game
-from ui.actions.options_action import open_options
-from ui.actions.help_action import open_help
-from ui.actions.about_action import open_about
-from ui.actions.exit_action import exit_game
+from ui.actions.actions import (
+    start_game,
+    load_game,
+    open_options,
+    open_help,
+    open_about,
+    exit_game,
+)
+
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+MY_FONT_PATH = os.path.join(BASE_DIR, 'fronts', 'Greengoth_Exp_SHA_0.otf')
+MY_FONT_SIZE = 40
 
 
 class MainMenu(Scene):
     def __init__(self, game):
-        super().__init__('pcst_kshmr_game/assets/images/background_0.jpg')
+        super().__init__('assets/images/main_menu.jpg')
         self.game = game
-        self.set_text("Главное меню")
+        self.title = "know who you are"
+        self.title_color = (245, 245, 245)
+        self.title_shadow = (0, 0, 0)
+        self.title_font = self._load_title_font()
+        self.set_text("")
         
-        # расстановка кнопок в колонну
-        button_y_start = 150
+        # расстановка кнопок по центру
+        button_width = 300
         button_height = 50
-        button_spacing = 80
-        button_x = 300
-        button_width = 200
+        button_spacing = 70
+        button_x = (self.game.LOGICAL_W - button_width) // 2
+        button_y_start = 420
         
         start_btn = Button(
             button_x, 
             button_y_start, 
             button_width, 
             button_height, 
-            "Начать", 
-            (0, 255, 0), 
-            (0, 0, 0), 
-            lambda: start_game(game)
+            "start", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: start_game(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         load_btn = Button(
@@ -37,10 +53,12 @@ class MainMenu(Scene):
             button_y_start + button_spacing, 
             button_width, 
             button_height, 
-            "Загрузить", 
-            (0, 200, 255), 
-            (0, 0, 0), 
-            lambda: load_game(game)
+            "load", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: load_game(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         options_btn = Button(
@@ -48,10 +66,12 @@ class MainMenu(Scene):
             button_y_start + button_spacing * 2, 
             button_width, 
             button_height, 
-            "Настройки", 
-            (255, 200, 0), 
-            (0, 0, 0), 
-            lambda: open_options(game)
+            "options", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: open_options(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         help_btn = Button(
@@ -59,10 +79,12 @@ class MainMenu(Scene):
             button_y_start + button_spacing * 3, 
             button_width, 
             button_height, 
-            "Справка", 
-            (255, 100, 100), 
-            (0, 0, 0), 
-            lambda: open_help(game)
+            "help", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: open_help(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         about_btn = Button(
@@ -70,10 +92,12 @@ class MainMenu(Scene):
             button_y_start + button_spacing * 4, 
             button_width, 
             button_height, 
-            "О игре", 
-            (150, 150, 255), 
-            (0, 0, 0), 
-            lambda: open_about(game)
+            "about", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: open_about(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         exit_btn = Button(
@@ -81,10 +105,12 @@ class MainMenu(Scene):
             button_y_start + button_spacing * 5, 
             button_width, 
             button_height, 
-            "Выход", 
-            (255, 0, 0), 
-            (255, 255, 255), 
-            lambda: exit_game(game)
+            "exit", 
+            (180, 180, 180), 
+            (180, 180, 180), 
+            lambda: exit_game(game),
+            font_path=MY_FONT_PATH,
+            font_size=MY_FONT_SIZE 
         )
         
         self.add_button(start_btn)
@@ -93,3 +119,21 @@ class MainMenu(Scene):
         self.add_button(help_btn)
         self.add_button(about_btn)
         self.add_button(exit_btn)
+
+    def _load_title_font(self):
+        try:
+            return pygame.font.Font(MY_FONT_PATH, 72)
+        except FileNotFoundError:
+            print(f"шрифт {MY_FONT_PATH} не найден! использую системный.")
+            return pygame.font.SysFont(None, 72)
+
+    def draw(self, screen, mouse_pos=None):
+        super().draw(screen, mouse_pos)
+
+        title_surface = self.title_font.render(self.title, True, self.title_color)
+        title_shadow = self.title_font.render(self.title, True, self.title_shadow)
+        title_shadow.set_alpha(220)
+
+        title_rect = title_surface.get_rect(midtop=(screen.get_width() // 2, 300))
+        screen.blit(title_shadow, title_rect.move(4, 4))
+        screen.blit(title_surface, title_rect)
