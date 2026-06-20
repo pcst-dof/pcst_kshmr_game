@@ -1,7 +1,9 @@
 import pygame
 import sys
-from scenes import StartScene, Scene1, MainMenu, SettingsMenu, LoadMenu, HelpMenu, AboutMenu, Place_0, Place_1, Place_2
+from scenes import StartScene, Scene1, MainMenu, SettingsMenu, LoadMenu, HelpMenu, AboutMenu, Place_0, Place_1, Place_2, SaveMenu
 from input_manager import InputManager
+from systems.memory import update_memory
+from assets.sprites.character import Character
 
 class Game:
     def __init__(self):
@@ -11,11 +13,13 @@ class Game:
 
         self.window_width = self.LOGICAL_W
         self.window_height = self.LOGICAL_H
+        self.original_width = self.LOGICAL_W   # ← ДОБАВЬ ЭТУ СТРОКУ
+        self.original_height = self.LOGICAL_H  # ← И ЭТУ
         self.fullscreen = False
         
         self.screen = pygame.display.set_mode(
             (self.window_width, self.window_height), 
-            pygame.RESIZABLE
+            pygame.RESIZABLE | pygame.SCALED
         )
 
         self.input_manager = InputManager()
@@ -37,7 +41,8 @@ class Game:
             "scene1": Scene1(self),
             "main_menu": MainMenu(self),
             "settings_menu": SettingsMenu(self),
-            "load_menu": LoadMenu(self),
+            "load_menu": SaveMenu(self, mode='load'),
+            "save_menu": SaveMenu(self, mode='save'),  
             "help_menu": HelpMenu(self),
             "about_menu": AboutMenu(self),
             "0": Place_0(self),
@@ -51,21 +56,26 @@ class Game:
         """переключение между полноэкранным и оконным режимом"""
         self.fullscreen = not self.fullscreen
         
-        if self.fullscreen:
-            display_info = pygame.display.Info()
-            self.screen = pygame.display.set_mode(
-                (display_info.current_w, display_info.current_h),
-                pygame.FULLSCREEN
-            )
-        else:
-            self.screen = pygame.display.set_mode(
-                (self.window_width, self.window_height),
-                pygame.RESIZABLE
-            )
-        
-        self.window_width, self.window_height = self.screen.get_size()
-
-
+        try:
+            if self.fullscreen:
+                display_info = pygame.display.Info()
+                self.screen = pygame.display.set_mode(
+                    (display_info.current_w, display_info.current_h),
+                    pygame.FULLSCREEN
+                )
+            else:
+                # Используем сохранённые оригинальные размеры
+                self.screen = pygame.display.set_mode(
+                    (self.original_width, self.original_height),
+                    pygame.RESIZABLE
+                )
+                self.window_width = self.original_width
+                self.window_height = self.original_height
+        except pygame.error as e:
+            print(f"Ошибка переключения режима: {e}")
+            # Возвращаем состояние обратно
+            self.fullscreen = not self.fullscreen
+            
     def change_scene(self, scene_name):
         if scene_name in self.scenes:
             scene = self.scenes[scene_name]
@@ -88,6 +98,47 @@ class Game:
             int((y - offset_y) / scale)
         )
     
+    def get_game_state(self):
+        # Определяем имя текущей сцены по словарю сцен
+        scene_name = None
+        for name, scene in self.scenes.items():
+            if scene is self.current_scene:
+                scene_name = name
+                break
+
+        if scene_name is None:
+            scene_name = getattr(self.current_scene, 'name', 'unknown')
+
+        return {
+            'current_scene': scene_name,
+            'player_choices': getattr(self, 'player_choices', {}),
+            'variables': getattr(self, 'variables', {}),
+            'inventory': getattr(self, 'inventory', []),
+            'flags': getattr(self, 'flags', {}),
+        }
+
+    def load_state(self, game_state):
+        """
+        Загрузить состояние игры из сохранения
+        """
+        self.player_choices = game_state.get('player_choices', {})
+        self.variables = game_state.get('variables', {})
+        self.inventory = game_state.get('inventory', [])
+        self.flags = game_state.get('flags', {})
+        # и т.д.
+
+    def save_game(self, slot, screenshot=None):
+        """
+        Сохранить игру в указанный слот
+        
+        slot - номер слота (1-9) или 'auto' для автосохранения
+        screenshot - скриншот (pygame.Surface)
+        """
+        from utils.save_manager import SaveManager
+        save_manager = SaveManager()
+        game_state = self.get_game_state()
+        save_manager.create_save(slot, game_state, screenshot)
+
     def _render_scaled(self):
         """отрисовка виртуального экрана с масштабированием на основной экран"""
         win_w, win_h = self.screen.get_size()
@@ -105,7 +156,7 @@ class Game:
         self.screen.fill((0, 0, 0))
         self.screen.blit(scaled, (offset_x, offset_y))
         pygame.display.flip()
-
+    
     def run(self):
         while self.running:
             dt = self.clock.tick(60) / 1000.0
@@ -141,7 +192,7 @@ class Game:
                 
             self.current_scene.update(dt)
                 
-            self._render_scaled()
+            self._render_scaled()  # ← Это правильно, НЕ меняй
 
         pygame.quit()
         sys.exit()

@@ -2,7 +2,8 @@ import sys
 
 def start_game(game):
     """переход в начало игры"""
-    game.change_scene("0")
+    # Переключаем сначала на сцену ввода имени, затем StartScene сама перейдёт в игру
+    game.change_scene("start")
 
 
 def open_options(game):
