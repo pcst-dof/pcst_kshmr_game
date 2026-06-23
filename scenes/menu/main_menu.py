@@ -28,7 +28,6 @@ class MainMenu(Scene):
         self.title_font = self._load_title_font()
         self.set_text("")
         
-        # расстановка кнопок по центру
         button_width = 300
         button_height = 50
         button_spacing = 70

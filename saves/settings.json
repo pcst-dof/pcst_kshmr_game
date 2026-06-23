@@ -1,0 +1,13 @@
+{
+  "music_volume": 38,
+  "sound_volume": 92,
+  "voice_volume": 100,
+  "text_speed": 5,
+  "auto_forward": 1,
+  "fullscreen": false,
+  "skip_unseen": false,
+  "skip_after_choices": false,
+  "skip_transitions": false,
+  "mute_all": false,
+  "language": "english"
+}

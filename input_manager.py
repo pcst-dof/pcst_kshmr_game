@@ -1,8 +1,7 @@
-# input_manager.py
 import pygame
 
 class InputManager:
-    """Обрабатывает ввод и возвращает игровые действия"""
+    """Обработка ввода и возвращение игровых действий"""
     
     def __init__(self):
         self.skip_held = False
@@ -11,7 +10,7 @@ class InputManager:
     
     def process(self, event, mouse_click=None):
         """
-        Обрабатывает событие pygame и возвращает строку-действие.
+        Обработка события и возврат строки-действия.
         Пример: 'advance', 'menu', 'skip_hold' или None
         """
         if event.type == pygame.KEYDOWN:

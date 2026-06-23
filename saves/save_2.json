@@ -1,0 +1,109 @@
+{
+  "slot": 2,
+  "timestamp": "2026-06-23T14:06:10.288853",
+  "game_state": {
+    "current_scene": "0",
+    "player_choices": {},
+    "variables": {},
+    "inventory": [],
+    "flags": {},
+    "relationships": {
+      "abel": {
+        "respect": 5,
+        "trust": 5,
+        "annoyance": 0
+      },
+      "clown_1": {
+        "interest": 0,
+        "obsession": 0,
+        "resistance": 0
+      },
+      "clown_2": {
+        "intellect": 0,
+        "respect": 0,
+        "unconventional": 0
+      }
+    },
+    "player_tags": {
+      "curious": 0,
+      "kind": 0,
+      "aggressive": 0
+    },
+    "dialogue_history": {
+      "entries": [
+        {
+          "type": "scene_change",
+          "from": "main_menu",
+          "to": "start"
+        },
+        {
+          "type": "scene_change",
+          "from": "start",
+          "to": "0"
+        },
+        {
+          "type": "line",
+          "scene": "0",
+          "speaker": "Авель",
+          "text": "Во, смотри, карты показывают идти именно сюда."
+        },
+        {
+          "type": "line",
+          "scene": "0",
+          "speaker": "ГГ",
+          "text": "Выглядит хуже, чем на фотках."
+        },
+        {
+          "type": "line",
+          "scene": "0",
+          "speaker": "Авель",
+          "text": "Хаха, да, есть такое. Но по отзывам вроде неплохо. Раньше тут было очень даже ничего."
+        },
+        {
+          "type": "choice_prompt",
+          "scene": "0",
+          "question": "Как ответить?",
+          "options": [
+            {
+              "text": "«Очень даже ничего? Ну ты и загнул.»",
+              "next": 4,
+              "aggressive": 3,
+              "annoyance": 1
+            },
+            {
+              "text": "«Поверю на слово.»",
+              "next": 24,
+              "curious": 2,
+              "trust": 1
+            },
+            {
+              "text": "Промолчать.",
+              "next": 45,
+              "kind": 2
+            }
+          ]
+        },
+        {
+          "type": "line",
+          "scene": "0",
+          "speaker": "ГГ",
+          "text": "Очень даже ничего? Ну ты и загнул."
+        },
+        {
+          "type": "line",
+          "scene": "0",
+          "speaker": "Авель",
+          "text": "Нет, ну... От внешнего вида, что был ранее тут мало чего осталось, но и не нам привередничать."
+        },
+        {
+          "type": "scene_change",
+          "from": "0",
+          "to": "save_menu"
+        }
+      ],
+      "current_scene": "0"
+    },
+    "current_dialogue": 5
+  },
+  "screenshot_path": "C:\\Users\\Милана\\Desktop\\univer\\univer_project\\pcst_kshmr_game\\pkg\\saves\\screenshots\\save_2.png"
+}

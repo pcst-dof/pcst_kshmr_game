@@ -1,21 +1,15 @@
 import pygame
 
-from systems.memory import MemoryEvent
-
 
 class Character:
     def __init__(self, name, image_path, x, y, state_images=None, default_state=None):
         self.name = name
 
-        # социальная система
-        self.memory = []
-        self.opinion = 0.0
-
         # визуал
-        self.opacity = 255  # 0-255, для прозрачности
+        self.opacity = 255  # для прозрачности
         self.state = None
-        self.original_images = {}  # Оригиналы без масштабирования
-        self.scaled_images = {}    # Кэш масштабированных
+        self.original_images = {}  
+        self.scaled_images = {}   
         self.image = None
         self.current_scale = 1.0
 
@@ -111,9 +105,6 @@ class Character:
             self._update_rect()
         else:
             print(f"Состояние персонажа не найдено: {state_name}")
-
-    def add_memory(self, tag, intensity):
-        self.memory.append(MemoryEvent(tag, intensity))
 
     def _update_rect(self):
         if self.image:

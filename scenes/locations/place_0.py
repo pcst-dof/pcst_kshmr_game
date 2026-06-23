@@ -1,165 +1,428 @@
-import pygame
-from scenes.scene import Scene
+from scenes.base_dialogue_scene import BaseDialogueScene
 
 
-class Place_0(Scene):
+class Place_0(BaseDialogueScene):
     """Улица перед заброшенным зданием."""
 
-    def __init__(self, game):
-        super().__init__("assets/images/background_0.jpg")
-        self.game = game
-        self.choice_active = False
-        self.selected_choice = 0
-        self.dialogues = [
-            {
-                "type": "line",
-                "speaker": "Друг",
-                "text": "Ну... вот оно."
-            },
-            {
-                "type": "line",
-                "speaker": "ГГ",
-                "text": "Выглядит хуже, чем на фотках."
-            },
-            {
-                "type": "line",
-                "speaker": "Друг",
-                "text": "Ты ведь тоже слышал все эти истории?"
-            },
-            {
-                "type": "choice",
-                "question": "Как ответить?",
-                "options": [
-                    {"text": "«Это просто слухи.»", "next": 4},
-                    {"text": "«Мне уже не по себе.»", "next": 6},
-                    {"text": "Промолчать", "next": 8}
-                ]
-            },
-            {
-                "type": "line",
-                "speaker": "ГГ",
-                "text": "Это просто слухи."
-            },
-            {
-                "type": "line",
-                "speaker": "Друг",
-                "text": "Надеюсь."
-            },
-            {
-                "type": "line",
-                "speaker": "ГГ",
-                "text": "Мне уже не по себе."
-            },
-            {
-                "type": "line",
-                "speaker": "Друг",
-                "text": "Вот и мне тоже."
-            },
-            {
-                "type": "line",
-                "speaker": "Друг",
-                "text": "...Ты чего молчишь?"
-            },
-            {
-                "type": "line",
-                "speaker": "ГГ",
-                "text": "Пошли уже.",
-                "next_scene": "1"
-            }
-        ]
-        self.current_dialogue = 0
-        self.auto_advance_timer = 0
+    SPRITE_ID = "abel"
+    NEXT_SCENE = "1"
+    RELATIONSHIP_PARAMS = {
+        "respect":   {"min": -10, "max": 10, "default": 5},
+        "trust":     {"min": -10, "max": 10, "default": 5},
+        "annoyance": {"min": 0,   "max": 10, "default": 0},
+    }
 
-    def get_current_dialogue(self):
-        """Безопасное получение текущего диалога"""
-        if 0 <= self.current_dialogue < len(self.dialogues):
-            return self.dialogues[self.current_dialogue]
-        return None
+    DIALOGUES = [
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Во, смотри, карты показывают идти именно сюда."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Выглядит хуже, чем на фотках."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Хаха, да, есть такое. Но по отзывам вроде неплохо. Раньше тут было очень даже ничего."
+        },
+        {
+            "type": "choice",
+            "question": "Как ответить?",
+            "options": [
+                {
+                    "text": "«Очень даже ничего? Ну ты и загнул.»",
+                    "next": 4,
+                    "aggressive": 3,
+                    "annoyance": 1
+                },
+                {
+                    "text": "«Поверю на слово.»",
+                    "next": 24,
+                    "curious": 2,
+                    "trust": 1
+                },
+                {
+                    "text": "Промолчать.",
+                    "next": 45,
+                    "kind": 2
+                }
+            ]
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Очень даже ничего? Ну ты и загнул."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Нет, ну... От внешнего вида, что был ранее тут мало чего осталось, но и не нам привередничать."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Слушай, может развернемся пока не поздно?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "ХАХА, ты трус что-ли? Ну давай, если хочешь, ты же трус. Я вот, честно говоря, не вижу смысла отказываться."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Да не трус я. Знаю, что призраков не бывает. но... Че-то не по себе."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да брось, самое ужасное, что может произойти - нас выкинут из здания охрана."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ну, тоже верно так-то..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну так что, идем или на месте стоять будем? Время не резиновое."
+        },
+        {
+            "type": "choice",
+            "question": "Как ответить?",
+            "options": [
+                {
+                    "text": "«Черт с тобой, пошли.»",
+                    "next": 13,
+                    "aggressive": 2,
+                    "respect": 1
+                },
+                {
+                    "text": "«Может все же еще подумаем..?»",
+                    "next": 15,
+                    "kind": 2,
+                    "annoyance": 2
+                },
+                {
+                    "text": "Промолчать.",
+                    "next": 21,
+                    "kind": 1
+                }
+            ]
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Черт с тобой, пошли."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну вот, с этого и надо было начинать.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Может все же еще подумаем..?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да ну сколько можно эту нервотрепку устраивать?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Слушай, если хочешь - оставайся тут как слабак и трус, а я пойду."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Я с тобой, ладно... Но если что-то случится!"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да брось, что может произойти? Идем уже.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Приму твое молчание как согласие. Идем, не отставай.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Поверю на слово."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну, как хочешь. Тут и история у здания богатая была."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Помню, что когда-то тут проводились специфические представления, вот цирк и закрыли."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ммм... Это какие например?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну... Дословно я не помню, но с людьми там обращались отвратно. В общем, не для слабонервных."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Это как?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Если правильно помню, то одному из клоунов глаза выкололи в итоге, а другому, и того хуже... Лицо растворили."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Но все это байки. Было так на самом деле или нет - никто дословно не знает."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну что, страшно? Или все же пойдем?"
+        },
+        {
+            "type": "choice",
+            "question": "Как ответить?",
+            "options": [
+                {
+                    "text": "«Ладно, пошли уже, хватит болтать.»",
+                    "next": 35,
+                    "aggressive": 2,
+                    "respect": 1
+                },
+                {
+                    "text": "«Может, правда развернемся?»",
+                    "next": 37,
+                    "kind": 3,
+                    "annoyance": 2
+                },
+                {
+                    "text": "Промолчать.",
+                    "next": 42,
+                    "kind": 1
+                }
+            ]
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ладно, пошли уже, хватит болтать."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Вот и славно. Не пожалеешь.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Может, правда развернемся? Что-то мне не по себе после твоих рассказов."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ой, да ладно тебе. Это все старые байки, давно уже тут ничего нет."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ну не знаю..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Слушай, ты же сам хотел сюда пойти. Не тормози."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ладно, уговорил. Но если что – я первый убегаю.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Молчание – знак согласия. Пошли."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "И не отставай.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да брось, правда место неплохое."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Ну-ну. А после окажется, что там захоронили всю трупу актеров, верно?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Не совсем так, но отчасти ты угадал, да."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да я шучу, не бойся ты так."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Не самые смешные у тебя шутки, если честно."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Какие есть, ты ведь до сих пор со мной общаешься, значит все же нравятся."
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Бред не неси."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ну, за разговорами время идет всяко быстрее, вот мы и дошли. Ну что, заходим?"
+        },
+        {
+            "type": "choice",
+            "question": "Как ответить?",
+            "options": [
+                {
+                    "text": "«Давай, пошли.»",
+                    "next": 55,
+                    "respect": 2,
+                    "aggressive": 1
+                },
+                {
+                    "text": "«Может, передумаем?»",
+                    "next": 57,
+                    "kind": 3,
+                    "annoyance": 1
+                },
+                {
+                    "text": "Промолчать.",
+                    "next": 62,
+                    "kind": 1
+                }
+            ]
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Давай, пошли."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Вот это настрой!",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Может, передумаем? А вдруг там правда что-то есть?"
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Да ты что, испугался? После моих-то шуток?"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Не испугался, просто... осторожно хочу быть."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Ладно, пойдем тихо и аккуратно. Идем?"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "Идем.",
+            "next_scene": "1"
+        },
+        {
+            "type": "line",
+            "speaker": "ГГ",
+            "text": "..."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Опять молчишь? Ладно, пойдем."
+        },
+        {
+            "type": "line",
+            "speaker": "Авель",
+            "text": "Только не отставать.",
+            "next_scene": "1"
+        }
+    ]
 
-    def handle_event(self, event, mouse_pos=None, action=None, dt=0):
-        """Обработка событий с поддержкой InputManager"""
+    def __init__(self, game, name):
+        super().__init__(game, name, "assets/images/background_0.jpg")
 
-        current = self.get_current_dialogue()
-        if not current:
-            return super().handle_event(event, mouse_pos, action, dt)
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and current["type"] == "line":
-                if "next_scene" in current:
-                    self.game.change_scene(current["next_scene"])
-                    return True
-                if "next" in current:
-                    self.current_dialogue = current["next"]
-                    return True
-                self.next_dialogue()
-                return True
-            
-            if current["type"] == "choice":
-                if event.key == pygame.K_UP:
-                    self.selected_choice = max(0, self.selected_choice - 1)
-                    return True
-                elif event.key == pygame.K_DOWN:
-                    self.selected_choice = min(len(current["options"]) - 1, self.selected_choice + 1)
-                    return True
-                elif event.key == pygame.K_RETURN:
-                    option = current["options"][self.selected_choice]
-                    self.current_dialogue = option["next"]
-                    return True
-    
-        if action == 'advance':
-            if current["type"] == "line":
-                if "next_scene" in current:
-                    self.game.change_scene(current["next_scene"])
-                    return True
-                if "next" in current:
-                    self.current_dialogue = current["next"]
-                    return True
-                self.next_dialogue()
-                return True
-            
-            elif current["type"] == "choice":
-                option = current["options"][self.selected_choice]
-                self.current_dialogue = option["next"]
-                return True
-
-        if current["type"] == "choice":
-            if action == 'nav_up':
-                self.selected_choice = max(0, self.selected_choice - 1)
-                return True
-            if action == 'nav_down':
-                self.selected_choice = min(len(current["options"]) - 1, self.selected_choice + 1)
-                return True
-
-        if action == 'menu':
-            self.game.change_scene('main_menu')
-            return True
-        
-        return super().handle_event(event, mouse_pos, action, dt)
-
-        
-
-    def update(self, dt):
-        """Вызывается каждый кадр — для авто-пропуска при удержании"""
-        if self.game.input_manager.is_skipping():
-            self.auto_advance_timer += dt
-            if self.auto_advance_timer >= 0.05:
-                self.auto_advance_timer = 0
-                current = self.get_current_dialogue()
-                if current and current["type"] == "line":
-                    if "next_scene" in current:
-                        self.game.change_scene(current["next_scene"])
-                        return
-                    if "next" in current:
-                        self.current_dialogue = current["next"]
-                        return
-                    self.next_dialogue()
-
-    def next_dialogue(self):
-        """Переход к следующей реплике"""
-        if self.current_dialogue < len(self.dialogues) - 1:
-            self.current_dialogue += 1
-        else:
-            self.game.change_scene("1")
-
-    def draw(self, surface, mouse_pos=None):
-        """Отрисовка сцены через базовый Scene.draw"""
-        return super().draw(surface, mouse_pos)
+    def _apply_line_effects(self, line):
+        pass

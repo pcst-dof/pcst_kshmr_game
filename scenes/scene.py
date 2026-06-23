@@ -1,16 +1,20 @@
-# scenes/scene.py
 import os
 import json
 import pygame
-from ui.menubar import MenuBar
 
 BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DEFAULT_TEXT_FONT = os.path.join(BASE_DIR, 'fronts', 'Greengoth_Exp_SHA_0.otf')
 
+MENU_ITEMS = ["Back", "History", "Skip", "Auto", "Save", "Q.Save", "Q.Load", "Prefs"]
+MENU_SPACING = 80
+MENU_FOOTER_OFFSET = 25
+
+
 class Scene:
-    def __init__(self, background_path=None):
+    def __init__(self, background_path=None, scene_name=''):
+        self.name = scene_name
         self.background = None
-        self.auto_delay = 6.0
+        self.auto_delay = 1.0
         if background_path:
             try:
                 self.background = pygame.image.load(background_path)
@@ -20,24 +24,28 @@ class Scene:
         self.buttons = []
         self.characters = []
         self.dialogues = []
-        self.menu_bar = None
         self.current_dialogue = 0
         self.dialogue_rect = pygame.Rect(40, 660, 1200, 230)
         self.selected_choice = 0
         self.text = ""
+        self.show_bottom_menu = False
         
-        # === НОВЫЕ ПЕРЕМЕННЫЕ ДЛЯ ФУНКЦИЙ ===
-        self.history = []  # История диалогов для кнопки Back
-        self.skip_mode = False  # Режим пропуска
-        self.auto_mode = False  # Авторежим
-        self.auto_timer = 0  # Таймер для авторежима
-        self.auto_delay = 6000  # 6 секунд (в миллисекундах)
+        # Функции меню
+        self.history = []
+        self.skip_mode = False
+        self.auto_mode = False
+        self.auto_timer = 0
+        
+        # Временная блокировка advance после клика по нижней панели
+        self._ignore_advance_until = 0
         
         try:
             self.font = pygame.font.Font(DEFAULT_TEXT_FONT, 32)
         except FileNotFoundError:
             print(f"шрифт {DEFAULT_TEXT_FONT} не найден! использую системный.")
             self.font = pygame.font.SysFont(None, 32)
+        
+        self.menu_font = pygame.font.SysFont(None, 20)
 
     def add_button(self, button):
         self.buttons.append(button)
@@ -57,29 +65,26 @@ class Scene:
         return None
     
     def next_dialogue(self):
-        # Сохраняем текущий диалог в историю
-        current = self.get_current_dialogue()
-        if current:
-            self.history.append({
-                "index": self.current_dialogue,
-                "dialogue": current
-            })
-        
+        self.history.append(self.current_dialogue)
+
         if self.current_dialogue < len(self.dialogues) - 1:
             self.current_dialogue += 1
-            # Если включен skip_mode и следующий диалог - это выбор, останавливаемся
-            if self.skip_mode and self.dialogues[self.current_dialogue].get("type") == "choice":
+
+            current = self.get_current_dialogue()
+
+            if (
+                self.skip_mode
+                and current
+                and current.get("type") == "choice"
+            ):
                 self.skip_mode = False
-                print("Skip остановлен на выборе")
+
         else:
             print("Конец сцены")
 
     def previous_dialogue(self):
-        """Возврат к предыдущему диалогу"""
-        if self.history:
-            last = self.history.pop()
-            self.current_dialogue = last["index"]
-            print(f"Возврат к диалогу {self.current_dialogue}")
+        if self.current_dialogue > 0:
+            self.current_dialogue -= 1
 
     def wrap_text(self, text, max_width):
         words = text.split(' ')
@@ -105,48 +110,88 @@ class Scene:
             text = text[:-1]
         return text + ellipsis if text else ellipsis
 
+    def _get_menu_item_rects(self):
+        """Возвращает список кортежей (item_name, rect) для кнопок нижней панели."""
+        footer_y = self.game.LOGICAL_H - MENU_FOOTER_OFFSET
+        start_x = (self.game.LOGICAL_W - MENU_SPACING * len(MENU_ITEMS)) // 2
+        
+        rects = []
+        for i, item in enumerate(MENU_ITEMS):
+            item_x = start_x + i * MENU_SPACING
+            item_width = MENU_SPACING
+            item_height = 30
+            item_rect = pygame.Rect(item_x - 5, footer_y - 8, item_width, item_height)
+            rects.append((item, item_rect))
+        
+        return rects
+    
+    def _handle_bottom_menu_click(self, mouse_pos):
+        """Обработка клика по нижней панели. Возвращает True если клик был обработан."""
+        if not mouse_pos:
+            return False
+        
+        for item, item_rect in self._get_menu_item_rects():
+            if item_rect.collidepoint(mouse_pos):
+                # блок advance на 200мс, чтобы отпускание мыши не продвинуло диалог
+                self._ignore_advance_until = pygame.time.get_ticks() + 200
+                
+                if item == "Back":
+                    if self.history:
+                        self.previous_dialogue()
+                elif item == "History":
+                    self.show_history()
+                elif item == "Skip":
+                    self.skip_mode = not self.skip_mode
+
+                elif item == "Auto":
+                    self.auto_mode = not self.auto_mode
+                    if self.auto_mode:
+                        self.auto_timer = 0
+                elif item == "Save":
+                    self.save_game()
+                elif item == "Q.Save":
+                    self.quick_save()
+                elif item == "Q.Load":
+                    self.quick_load()
+                elif item == "Prefs":
+                    self.open_preferences()
+                return True
+        
+        return False
+    
+    def _draw_bottom_menu(self, screen, mouse_pos):
+        """Рисует нижнюю панель меню"""
+        footer_y = self.game.LOGICAL_H - MENU_FOOTER_OFFSET
+        menu_rects = self._get_menu_item_rects()
+        
+        hovered_item = None
+        if mouse_pos:
+            for i, (item, item_rect) in enumerate(menu_rects):
+                if item_rect.collidepoint(mouse_pos):
+                    hovered_item = i
+                    break
+        
+        for i, (item, item_rect) in enumerate(menu_rects):
+            item_x = item_rect.x + 5
+            
+            if i == hovered_item:
+                color = (220, 220, 220)
+                shadow_surf = self.menu_font.render(item, True, (0, 0, 0))
+                screen.blit(shadow_surf, (item_x + 1, footer_y + 1))
+            else:
+                color = (140, 140, 140)
+            
+            item_surf = self.menu_font.render(item, True, color)
+            screen.blit(item_surf, (item_x, footer_y))
+
     def handle_event(self, event, mouse_pos=None, action=None, dt=0):
         """Обработка событий"""
-
-                # Обработка кликов по нижней панели меню
+        
+        # Клики по нижней панели меню
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-            if mouse_pos:
-                footer_y = self.game.LOGICAL_H - 40
-                menu_items = ["Back", "History", "Skip", "Auto", "Save", "Q.Save", "Q.Load", "Prefs"]
-                spacing = 80
-                start_x = (self.game.LOGICAL_W - spacing * len(menu_items)) // 2
-                
-                for i, item in enumerate(menu_items):
-                    item_x = start_x + i * spacing
-                    item_width = 80
-                    item_rect = pygame.Rect(item_x, footer_y - 10, item_width, 25)
-                    
-                    if item_rect.collidepoint(mouse_pos):
-                        if item == "Back":
-                            self.previous_dialogue()
-                        elif item == "History":
-                            self.show_history()
-                        elif item == "Skip":
-                            self.skip_mode = True
-                            print("Skip режим включен")
-                        elif item == "Auto":
-                            self.auto_mode = not self.auto_mode
-                            if self.auto_mode:
-                                self.auto_timer = 0
-                            print(f"Auto режим: {'ВКЛ' if self.auto_mode else 'ВЫКЛ'}")
-                        elif item == "Save":
-                            self.save_game()
-                        elif item == "Q.Save":
-                            self.quick_save()
-                        elif item == "Q.Load":
-                            self.quick_load()
-                        elif item == "Prefs":
-                            self.open_preferences()
-                        return True
-                    
-        # Отладка
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            print(f"[Scene] Клик: mouse_pos={mouse_pos}, dialogue={self.current_dialogue}")
+            if self.show_bottom_menu:
+                if self._handle_bottom_menu_click(mouse_pos):
+                    return True
         
         # Кнопки сцены
         if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
@@ -158,57 +203,45 @@ class Scene:
                             button.action()
                         return True
         
-        # === Обработка кнопок меню ===
-        if self.menu_bar:
-            clicked = self.menu_bar.handle_event(event, mouse_pos)
-            if clicked:
-                print(f"✓ Нажата кнопка: {clicked}")
-                if clicked == "Back":
-                    self.previous_dialogue()
-                elif clicked == "History":
-                    self.show_history()
-                elif clicked == "Skip":
-                    self.skip_mode = True
-                    print("Skip режим включен")
-                elif clicked == "Auto":
-                    self.auto_mode = not self.auto_mode
-                    if self.auto_mode:
-                        self.auto_timer = 0
-                    print(f"Auto режим: {'ВКЛ' if self.auto_mode else 'ВЫКЛ'}")
-                elif clicked == "Save":
-                    self.save_game()
-                elif clicked == "Q.Save":
-                    self.quick_save()
-                elif clicked == "Q.Load":
-                    self.quick_load()
-                elif clicked == "Prefs":
-                    self.open_preferences()
-                return True
-        
-        # Переход к следующему диалогу
-        if action == 'advance' and event.type != pygame.MOUSEBUTTONDOWN:
-            self.next_dialogue()
-            return True
-        
+        # Пробел — следующий диалог
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 self.next_dialogue()
                 return True
         
+        # Advance action 
+        if action == 'advance':
+            if pygame.time.get_ticks() < self._ignore_advance_until:
+                return True
+            self.next_dialogue()
+            return True
+        
         return False
 
     def update(self, dt):
-        """Обновление каждый кадр"""
-        # Авторежим
-        if self.auto_mode:
-            self.auto_timer += dt
-            if self.auto_timer >= self.auto_delay:
-                self.auto_timer = 0
+        current = self.get_current_dialogue()
+
+        if self.skip_mode:
+
+            while not current.get("type") == "choice":
                 self.next_dialogue()
-                print(f"Auto: переход к диалогу {self.current_dialogue}")
+                current = self.get_current_dialogue()
+            self.skip_mode = False
+
+        if self.auto_mode:
+
+            if current and current.get("type") == "choice":
+                self.auto_mode = False
+
+            else:
+                self.auto_timer += dt
+
+                if self.auto_timer >= self.auto_delay:
+                    self.auto_timer = 0
+                    self.next_dialogue()
 
     def draw(self, screen, mouse_pos=None):
-        # === ФОН ===
+        # фон
         if self.background:
             bg_w, bg_h = self.background.get_size()
             screen_w, screen_h = screen.get_size()
@@ -232,7 +265,7 @@ class Scene:
         else:
             screen.fill((10, 10, 10))
 
-        # === ПЕРСОНАЖИ ===
+        # спруты
         screen_w, screen_h = screen.get_size()
         
         for character in self.characters:
@@ -243,10 +276,16 @@ class Scene:
             button.draw(screen, mouse_pos)
 
         current = self.get_current_dialogue()
-        if not current:
-            return
+        
+        if current:
+            self._draw_dialogue(screen, current)
 
-        # === ДИАЛОГОВОЕ ОКНО ===
+        # нижняя панель
+        if self.show_bottom_menu:
+            self._draw_bottom_menu(screen, mouse_pos)
+    
+    def _draw_dialogue(self, screen, current):
+        """Отрисовка диалогового окна"""
         dx = self.dialogue_rect.x
         dy = self.dialogue_rect.y
         dw = self.dialogue_rect.width
@@ -360,121 +399,79 @@ class Scene:
                 screen.blit(option_surface, (dx + 50, y))
                 y += 55
 
-        # === НИЖНЯЯ ПАНЕЛЬ МЕНЮ ===
-        self._draw_bottom_menu(screen, mouse_pos)
-
-    def _draw_bottom_menu(self, screen, mouse_pos):
-        """Рисует нижнюю панель меню (стиль стартовой сцены)"""
-        footer_y = self.game.LOGICAL_H - 60
-        menu_font = pygame.font.SysFont(None, 20)
-        menu_items = ["Back", "History", "Skip", "Auto", "Save", "Q.Save", "Q.Load", "Prefs"]
-        spacing = 80
-        start_x = (self.game.LOGICAL_W - spacing * len(menu_items)) // 2
-        
-        # Проверяем наведение мыши
-        hovered_item = None
-        if mouse_pos:
-            for i, item in enumerate(menu_items):
-                item_x = start_x + i * spacing
-                item_rect = pygame.Rect(item_x, footer_y - 10, 
-                                       menu_font.size(item)[0] + 10, 25)
-                if item_rect.collidepoint(mouse_pos):
-                    hovered_item = i
-                    break
-        
-        # Рисуем элементы
-        for i, item in enumerate(menu_items):
-            item_x = start_x + i * spacing
-            
-            # Цвет: светлее при наведении
-            if i == hovered_item:
-                color = (200, 200, 200)  # светлее
-                # Лёгкая тень
-                shadow_surf = menu_font.render(item, True, (0, 0, 0))
-                screen.blit(shadow_surf, (item_x + 1, footer_y + 1))
-            else:
-                color = (140, 140, 140)  # обычный
-            
-            item_surf = menu_font.render(item, True, color)
-            screen.blit(item_surf, (item_x, footer_y))
-
-    # === МЕТОДЫ ДЛЯ КНОПОК ===
-    
     def show_history(self):
-        """Показать историю диалогов"""
-        print(f"История: {len(self.history)} записей")
-        for i, entry in enumerate(self.history[-5:], 1):  # Показываем последние 5
-            print(f"{i}. Диалог #{entry['index']}: {entry['dialogue'].get('text', '')[:50]}...")
+        print("\n===== HISTORY =====")
+
+        start = max(0, self.current_dialogue - 20)
+
+        for i in range(start, self.current_dialogue + 1):
+            dialogue = self.dialogues[i]
+
+            if dialogue["type"] == "line":
+                speaker = dialogue.get("speaker", "")
+                text = dialogue.get("text", "")
+
+                print(f"{speaker}: {text}")
+
+        print("===================\n")
 
     def save_game(self):
-        """Сохранение прогресса"""
-        try:
-            save_data = {
-                "scene": self.__class__.__name__,
-                "current_dialogue": self.current_dialogue,
-                "history_length": len(self.history),
-                "timestamp": str(pygame.time.get_ticks())
-            }
-            
-            save_path = os.path.join(BASE_DIR, "saves", "save.json")
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            
-            with open(save_path, 'w', encoding='utf-8') as f:
-                json.dump(save_data, f, ensure_ascii=False, indent=2)
-            
-            print("✓ Игра сохранена")
-        except Exception as e:
-            print(f"✗ Ошибка сохранения: {e}")
+        """Открыть меню сохранений"""
+        if hasattr(self, 'game') and self.game:
+            screenshot = self.game.virtual_screen.copy()
+            game_state = self.game.get_game_state()
+            self.game.scenes['save_menu'].game_state_to_save = game_state
+            self.game.scenes['save_menu'].screenshot_to_save = screenshot
+            self.game.scenes['save_menu'].previous_scene = self.name
+
+            self.game.change_scene("save_menu")
 
     def quick_save(self):
-        """Быстрое сохранение с выходом в меню"""
-        try:
-            save_data = {
-                "scene": self.__class__.__name__,
-                "current_dialogue": self.current_dialogue,
-                "history": self.history,
-                "skip_mode": self.skip_mode,
-                "auto_mode": self.auto_mode,
-                "timestamp": str(pygame.time.get_ticks())
-            }
-            
-            save_path = os.path.join(BASE_DIR, "saves", "quick_save.json")
-            os.makedirs(os.path.dirname(save_path), exist_ok=True)
-            
-            with open(save_path, 'w', encoding='utf-8') as f:
-                json.dump(save_data, f, ensure_ascii=False, indent=2)
-            
-            print("✓ Быстрое сохранение выполнено")
-            # Здесь код для выхода в меню:
-            # self.game.change_scene("main_menu")
-        except Exception as e:
-            print(f"✗ Ошибка быстрого сохранения: {e}")
+        """Быстрое сохранение в слот 1"""
+        if not hasattr(self, 'game') or not self.game:
+            return
+
+        screenshot = pygame.Surface(
+            (self.game.LOGICAL_W, self.game.LOGICAL_H)
+        )
+
+        self.draw(screenshot)
+
+        self.game.save_game(
+            slot=1,
+            screenshot=screenshot
+        )
+
+        print("Quick Save")
 
     def quick_load(self):
-        """Быстрая загрузка с выходом в меню"""
-        try:
-            save_path = os.path.join(BASE_DIR, "saves", "quick_save.json")
-            
-            if not os.path.exists(save_path):
-                print("✗ Нет быстрого сохранения")
-                return
-            
-            with open(save_path, 'r', encoding='utf-8') as f:
-                save_data = json.load(f)
-            
-            self.current_dialogue = save_data.get("current_dialogue", 0)
-            self.history = save_data.get("history", [])
-            self.skip_mode = save_data.get("skip_mode", False)
-            self.auto_mode = save_data.get("auto_mode", False)
-            
-            print("✓ Быстрая загрузка выполнена")
-            # Здесь код для выхода в меню:
-            # self.game.change_scene("main_menu")
-        except Exception as e:
-            print(f"✗ Ошибка быстрой загрузки: {e}")
+        """Загрузка из слота 1"""
+        from utils.save_manager import SaveManager
+
+        save_manager = SaveManager()
+
+        game_state = save_manager.load_save(1)
+
+        if not game_state:
+            print("✗ Нет быстрого сохранения")
+            return
+
+        self.game.load_state(game_state)
+
+        scene_name = game_state.get(
+            "current_scene",
+            "main_menu"
+        )
+
+        self.game.change_scene(scene_name)
+
+        self.current_dialogue = game_state.get('current_dialogue', 0)
+
+        print("Quick Load")
 
     def open_preferences(self):
         """Открыть настройки"""
         print("Открыть настройки...")
-        # Здесь код для открытия окна настроек:
-        # self.game.show_settings()
+        if hasattr(self, 'game') and self.game:
+            self.game.scenes['settings_menu'].previous_scene = self.name
+            self.game.change_scene("settings_menu")

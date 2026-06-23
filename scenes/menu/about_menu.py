@@ -1,27 +1,11 @@
-import os
 import pygame
-
-from scenes.menu.main_menu import BASE_DIR
-from scenes.scene import Scene
-from ui.button import Button
-
-BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-MY_FONT_PATH = os.path.join(BASE_DIR, 'fronts', 'Greengoth_Exp_SHA_0.otf')
-MY_FONT_SIZE = 40
+from scenes.menu.base_menu import BaseMenu
 
 
-class AboutMenu(Scene):
+class AboutMenu(BaseMenu):
     def __init__(self, game):
-        super().__init__('assets/images/background_0.png')
-        self.game = game
+        super().__init__(game, "about_menu")
         self.set_text("О игре")
-
-        try:
-            self.text_font = pygame.font.Font(MY_FONT_PATH, 28)
-            self.title_font = pygame.font.Font(MY_FONT_PATH, 32)
-        except FileNotFoundError:
-            self.text_font = pygame.font.SysFont(None, 28)
-            self.title_font = pygame.font.SysFont(None, 32)
 
         self.about_lines = [
             "KNOW WHO YOU ARE",
@@ -38,25 +22,6 @@ class AboutMenu(Scene):
             "",
             "2026"
         ]
-
-        button_width = 260
-        button_height = 56
-        button_x = (self.game.LOGICAL_W - button_width) // 2
-        button_y = self.game.LOGICAL_H - 130
-
-        back_btn = Button(
-            button_x,
-            button_y,
-            button_width,
-            button_height,
-            "Вернуться",
-            (100, 100, 255),
-            (255, 255, 255),
-            lambda: game.change_scene("main_menu"),
-            font_path=MY_FONT_PATH,
-            font_size=MY_FONT_SIZE
-        )
-        self.add_button(back_btn)
 
     def draw(self, screen, mouse_pos=None):
         super().draw(screen, mouse_pos)
@@ -81,4 +46,3 @@ class AboutMenu(Scene):
             screen.blit(text_surface, text_rect)
 
             y_offset += line_height
-
